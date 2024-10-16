@@ -6,3 +6,4 @@ rich
 tqdm
 Flask
 psutil
+python-dotenv
