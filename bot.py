@@ -10,7 +10,7 @@ from keep_alive import keep_alive
 
 # Load environment variables from .env file
 load_dotenv()
-BOT_TOKEN = os.getenv('token')
+BOT_TOKEN = os.getenv('TOKEN')
 print(f"Oyeeee! I'm working!! 🤖")
 
 # Configure logging
