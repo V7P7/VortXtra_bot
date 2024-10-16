@@ -2,6 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 import telebot
+import shutil
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -22,6 +23,31 @@ logging.basicConfig(
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
+@bot.message_handler(commands=['storage'])
+def handle_storage(message):
+    if not is_authenticated(message):
+        bot.reply_to(message, "❌ You need to log in first. Please use the /login command.")
+        return
+
+    # Get disk usage information
+    total, used, free = shutil.disk_usage(os.getcwd())
+
+    # Convert bytes to GB for easier readability
+    total_gb = total / (1024 ** 3)
+    used_gb = used / (1024 ** 3)
+    free_gb = free / (1024 ** 3)
+
+    # Format the message
+    storage_info = f"""
+💾 Storage Information:
+- Total: {total_gb:.2f} GB
+- Used: {used_gb:.2f} GB
+- Free: {free_gb:.2f} GB
+    """
+
+    bot.reply_to(message, storage_info)
+    logging.info(f"User '{user_sessions[message.chat.id]}' requested storage information.")
+
 # Create a directory to store uploaded files
 UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
@@ -29,11 +55,8 @@ if not os.path.exists(UPLOAD_DIR):
 
 user_sessions = {}
 
-# Clear all sessions on startup to ensure users are logged out
 user_sessions.clear()
 
-
-# Function to create the main menu
 def main_menu():
     keyboard = telebot.types.InlineKeyboardMarkup()
     keyboard.add(
@@ -380,6 +403,11 @@ def handle_metadata(message):
     else:
         bot.reply_to(message, f"❌ File '{file_name}' not found.")
         logging.warning(f"File '{file_name}' not found for user '{user_sessions[message.chat.id]}'.")
+        
+
+if __name__ == '__main__':
+    load_dotenv()
+    os.system('gunicorn -c gunicorn.conf keep_alive:app')
 
 keep_alive()
 
