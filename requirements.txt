@@ -1,0 +1,7 @@
+pyTelegramBotAPI
+requests
+urllib3
+pyinstaller
+rich
+tqdm
+Flask

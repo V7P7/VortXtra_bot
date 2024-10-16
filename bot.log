@@ -1,0 +1,23 @@
+2024-10-16 15:31:30,979 - INFO - User 'Vortex' logged in.
+2024-10-16 15:32:00,388 - INFO - User 'Vortex' logged in.
+2024-10-16 15:32:54,142 - INFO - File 'VortXtra_bot.rar' uploaded by user 'Vortex'.
+2024-10-16 15:32:55,456 - INFO - User 'Vortex' requested file list.
+2024-10-16 15:34:45,125 - INFO - User 'Vortex' logged in.
+2024-10-16 15:56:09,607 - INFO - User 'Vortex' logged in.
+2024-10-16 16:01:34,777 - INFO - User 'Vortex' logged in.
+2024-10-16 16:02:14,471 - INFO - User 'Vortex' downloaded file 'VortXtra_bot.rar'.
+2024-10-16 16:04:40,368 - INFO - User 'Vortex' logged in.
+2024-10-16 16:04:44,644 - INFO - User 'Vortex' requested file list.
+2024-10-16 16:05:21,555 - INFO - User 'Vortex' downloaded file 'VortXtra_bot.rar'.
+2024-10-16 16:22:03,794 - INFO - User 'Vortex' logged in.
+2024-10-16 16:23:22,776 - INFO - User 'Vortex' logged in.
+2024-10-16 16:23:28,965 - INFO - File 'VortXtra_bot.rar' uploaded by user 'Vortex'.
+2024-10-16 16:24:33,759 - INFO - User 'Vortex' downloaded file 'VortXtra_bot.rar'.
+2024-10-16 18:18:41,939 - INFO - User 'Vortex' logged in.
+2024-10-16 18:37:18,063 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://192.168.0.229:8080
+2024-10-16 18:37:18,063 - INFO - [33mPress CTRL+C to quit[0m
+2024-10-16 18:38:02,870 - INFO - 192.168.0.229 - - [16/Oct/2024 18:38:02] "GET / HTTP/1.1" 200 -
+2024-10-16 18:38:02,949 - INFO - 192.168.0.229 - - [16/Oct/2024 18:38:02] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
