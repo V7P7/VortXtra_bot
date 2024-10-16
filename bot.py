@@ -58,28 +58,49 @@ user_sessions = {}
 user_sessions.clear()
 
 def main_menu():
-    keyboard = telebot.types.InlineKeyboardMarkup()
-    keyboard.add(
-        telebot.types.InlineKeyboardButton("Login", callback_data="suggest_login"),
-        telebot.types.InlineKeyboardButton("Upload", callback_data="suggest_upload"),
-        telebot.types.InlineKeyboardButton("List Files", callback_data="suggest_list_files")
-    )
-    keyboard.add(
-        telebot.types.InlineKeyboardButton("Download", callback_data="suggest_download"),
-        telebot.types.InlineKeyboardButton("Rename", callback_data="suggest_rename"),
-        telebot.types.InlineKeyboardButton("Delete", callback_data="suggest_delete"),
-        telebot.types.InlineKeyboardButton("Logout", callback_data="suggest_logout")
-    )
-    return keyboard
+    markup = telebot.types.InlineKeyboardMarkup()
+
+    # Adding buttons for the various features
+    login_button = telebot.types.InlineKeyboardButton(text='Login', callback_data='suggest_login')
+    upload_button = telebot.types.InlineKeyboardButton(text='Upload', callback_data='suggest_upload')
+    list_files_button = telebot.types.InlineKeyboardButton(text='List Files', callback_data='suggest_list_files')
+    download_button = telebot.types.InlineKeyboardButton(text='Download', callback_data='suggest_download')
+    rename_button = telebot.types.InlineKeyboardButton(text='Rename', callback_data='suggest_rename')
+    delete_button = telebot.types.InlineKeyboardButton(text='Delete', callback_data='suggest_delete')
+    metadata_button = telebot.types.InlineKeyboardButton(text='Metadata', callback_data='suggest_metadata')
+    storage_button = telebot.types.InlineKeyboardButton(text='Storage Check', callback_data='suggest_storage')
+    logout_button = telebot.types.InlineKeyboardButton(text='Logout', callback_data='suggest_logout')
+
+    # Organize buttons into rows
+    markup.row(login_button, logout_button, list_files_button)
+    markup.row(upload_button, download_button, storage_button)
+    markup.row(metadata_button, rename_button, delete_button)
+
+    return markup
 
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    bot.reply_to(message, "👋 Welcome to the bot! Use the menu below:", reply_markup=main_menu())
+    bot.reply_to(message, """
+👋 Welcome to the bot! Here are the available commands:
+
+- /login <username> <password> - Log in to your account.
+- /upload - Upload a file.
+- /list - See your uploaded files.
+- /download <file_name> - Download a file.
+- /rename <old_name> <new_name> - Rename a file.
+- /delete <file_name> - Delete a file.
+- /logout - Log out from your account.
+- /metadata <file_name> - Get metadata of a file.
+- /storage - Check how much storage is left.
+
+Use the menu below:
+""", reply_markup=main_menu())
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback_query(call):
+    # Define responses for each button click
     suggestions = {
         "suggest_login": "Please use the command: /login <username> <password>",
         "suggest_upload": "Please use the command: /upload to attach a file.",
@@ -87,11 +108,17 @@ def handle_callback_query(call):
         "suggest_download": "Please use the command: /download <file_name>",
         "suggest_rename": "Please use the command: /rename <old_name> <new_name>",
         "suggest_delete": "Please use the command: /delete <file_name>",
-        "suggest_logout": "You can logout using: /logout"
+        "suggest_logout": "You can logout using: /logout",
+        "suggest_metadata": "Please use the command: /metadata <file_name> to get file metadata.",
+        "suggest_storage": "Please use the command: /storage to check available storage."
     }
 
+    # Get the appropriate response based on the button clicked
     suggestion_message = suggestions.get(call.data, "❓ Command not found.")
+
+    # Send the response message to the user
     bot.send_message(call.message.chat.id, suggestion_message)
+
 
 
 @bot.inline_handler(func=lambda query: True)
@@ -138,6 +165,18 @@ def handle_inline_query(inline_query):
             title='Logout',
             input_message_content=telebot.types.InputTextMessageContent('/logout'),
             description='Log out from your account.'
+        ),
+        telebot.types.InlineQueryResultArticle(
+            id='8',
+            title='Metadata',
+            input_message_content=telebot.types.InputTextMessageContent('/metadata <file_name>'),
+            description='Get file metadata.'
+        ),
+        telebot.types.InlineQueryResultArticle(
+            id='9',
+            title='Storage Check',
+            input_message_content=telebot.types.InputTextMessageContent('/storage'),
+            description='Check how much storage is left.'
         )
     ]
 
@@ -404,10 +443,6 @@ def handle_metadata(message):
         bot.reply_to(message, f"❌ File '{file_name}' not found.")
         logging.warning(f"File '{file_name}' not found for user '{user_sessions[message.chat.id]}'.")
         
-
-if __name__ == '__main__':
-    load_dotenv()
-    os.system('gunicorn -c gunicorn.conf keep_alive:app')
 
 keep_alive()
 
