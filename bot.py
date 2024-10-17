@@ -3,6 +3,7 @@ import logging
 from dotenv import load_dotenv
 import telebot
 import shutil
+import psutil
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -23,7 +24,27 @@ logging.basicConfig(
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
+def get_storage_info():
+    # Get the current working directory
+    current_directory = os.getcwd()
+
+    # Get the partition where the current directory is located
+    partition = psutil.disk_partitions()
+    disk_usage = psutil.disk_usage(current_directory)
+
+    # Calculate total, used, and free space in GB
+    total = disk_usage.total / (1024 ** 3)  # Convert to GB
+    used = disk_usage.used / (1024 ** 3)    # Convert to GB
+    free = disk_usage.free / (1024 ** 3)    # Convert to GB
+
+    return total, used, free, current_directory
+
 @bot.message_handler(commands=['storage'])
+def send_storage_info(message):
+    total, used, free, current_directory = get_storage_info()
+    storage_message = f"💾 Storage Information:\n- Directory: {current_directory}\n- Total: {total:.2f} GB\n- Used: {used:.2f} GB\n- Free: {free:.2f} GB"
+    bot.reply_to(message, storage_message)
+    
 def handle_storage(message):
     if not is_authenticated(message):
         bot.reply_to(message, "❌ You need to log in first. Please use the /login command.")
