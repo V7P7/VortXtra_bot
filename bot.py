@@ -24,15 +24,23 @@ logging.basicConfig(
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-def get_storage_info():
-    # Get the current working directory
-    current_directory = os.getcwd()
+UPLOAD_LIMIT_GB = 1  # 1 GB limit for the uploads directory
 
-    # Get the partition where the current directory is located
-    partition = psutil.disk_partitions()
+def get_directory_size(directory):
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(directory):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            if os.path.exists(fp):
+                total_size += os.path.getsize(fp)
+    return total_size
+
+def get_storage_info():
+    # Get disk usage for the current directory
+    current_directory = os.getcwd()
     disk_usage = psutil.disk_usage(current_directory)
 
-    # Calculate total, used, and free space in GB
+    # Calculate total, used, and free space in GB for the partition
     total = disk_usage.total / (1024 ** 3)  # Convert to GB
     used = disk_usage.used / (1024 ** 3)    # Convert to GB
     free = disk_usage.free / (1024 ** 3)    # Convert to GB
@@ -41,32 +49,34 @@ def get_storage_info():
 
 @bot.message_handler(commands=['storage'])
 def send_storage_info(message):
-    total, used, free, current_directory = get_storage_info()
-    storage_message = f"💾 Storage Information:\n- Directory: {current_directory}\n- Total: {total:.2f} GB\n- Used: {used:.2f} GB\n- Free: {free:.2f} GB"
-    bot.reply_to(message, storage_message)
-    
-def handle_storage(message):
     if not is_authenticated(message):
         bot.reply_to(message, "❌ You need to log in first. Please use the /login command.")
         return
 
-    # Get disk usage information
-    total, used, free = shutil.disk_usage(os.getcwd())
+    # Get disk storage info
+    total, used, free, current_directory = get_storage_info()
 
-    # Convert bytes to GB for easier readability
-    total_gb = total / (1024 ** 3)
-    used_gb = used / (1024 ** 3)
-    free_gb = free / (1024 ** 3)
+    # Calculate the size of files in the uploads directory
+    uploads_size_bytes = get_directory_size(UPLOAD_DIR)
+    uploads_size_gb = uploads_size_bytes / (1024 ** 3)  # Convert to GB
 
-    # Format the message
-    storage_info = f"""
+    # Get the remaining space in the uploads directory
+    remaining_upload_space_gb = UPLOAD_LIMIT_GB - uploads_size_gb
+
+    # Format the storage information message
+    storage_message = f"""
 💾 Storage Information:
-- Total: {total_gb:.2f} GB
-- Used: {used_gb:.2f} GB
-- Free: {free_gb:.2f} GB
-    """
+- Directory: {current_directory}
+- Total Disk Space: {total:.2f} GB
+- Used Disk Space: {used:.2f} GB
+- Free Disk Space: {free:.2f} GB
 
-    bot.reply_to(message, storage_info)
+🗂️ Uploads Directory:
+- Uploads Size: {uploads_size_gb:.2f} GB
+- Remaining Upload Space: {remaining_upload_space_gb:.2f} GB (out of {UPLOAD_LIMIT_GB} GB)
+"""
+
+    bot.reply_to(message, storage_message)
     logging.info(f"User '{user_sessions[message.chat.id]}' requested storage information.")
 
 # Create a directory to store uploaded files
@@ -141,7 +151,6 @@ def handle_callback_query(call):
     bot.send_message(call.message.chat.id, suggestion_message)
 
 
-
 @bot.inline_handler(func=lambda query: True)
 def handle_inline_query(inline_query):
     commands = [
@@ -209,6 +218,7 @@ def authenticate_user(username, password):
     # Check if the provided username and password match the stored values
     return username == os.getenv('user') and password == os.getenv('password')
 
+
 @bot.message_handler(commands=['login'])
 def handle_login(message):
     text_split = message.text.split()
@@ -238,6 +248,7 @@ def handle_logout(message):
     else:
         bot.reply_to(message, "❌ You are not logged in.")
 
+
 def is_authenticated(message):
     return message.chat.id in user_sessions
 
@@ -249,13 +260,13 @@ def handle_upload_command(message):
         return
 
     current_time = time.time()
-    last_command_time = user_command_time.get(message.chat.id, 0)
+    last_command_time = user_command_time.get(message.chat.id, 0) # type: ignore
 
     if current_time - last_command_time < 5:
         bot.reply_to(message, "⏳ Please wait before using the command again.")
         return
 
-    user_command_time[message.chat.id] = current_time
+    user_command_time[message.chat.id] = current_time # type: ignore
     bot.reply_to(message, "📁 Please attach a file with the /upload command.")
 
 
@@ -317,7 +328,6 @@ def get_session_with_retries():
     return session
 
 
-# File download handler with retry and timeout handling
 @bot.message_handler(commands=['download'])
 def handle_download(message):
     if not is_authenticated(message):
@@ -326,37 +336,52 @@ def handle_download(message):
 
     text_split = message.text.split()
     if len(text_split) < 2:
-        bot.reply_to(message, "❓ Please provide a file name after the /download command.")
+        bot.reply_to(message, "❓ Please provide file indices after the /download command (e.g., /download 1 2).")
         return
 
-    file_name = text_split[1]
-    file_path = os.path.join(UPLOAD_DIR, file_name)
+    file_indices = [int(i) - 1 for i in text_split[1:] if i.isdigit()]
+    files = os.listdir(UPLOAD_DIR)
+    too_large_files = []
+    downloaded_files = []
+    not_found_files = []
 
-    if os.path.exists(file_path):
-        try:
-            file_size = os.path.getsize(file_path)  # Get file size
-            max_file_size = 50 * 1024 * 1024  # 50 MB limit for regular bot uploads
+    for index in file_indices:
+        if 0 <= index < len(files):  # Validate index
+            file_name = files[index]
+            file_path = os.path.join(UPLOAD_DIR, file_name)
+            if os.path.exists(file_path):
+                try:
+                    file_size = os.path.getsize(file_path)
+                    max_file_size = 50 * 1024 * 1024  # 50 MB limit for Telegram uploads
 
-            if file_size > max_file_size:
-                bot.reply_to(message, "❌ File is too large to be uploaded via Telegram (50 MB limit).")
-                logging.warning(
-                    f"File '{file_name}' is too large to upload for user '{user_sessions[message.chat.id]}'.")
-                return
+                    if file_size > max_file_size:
+                        too_large_files.append(file_name)
+                        logging.warning(f"File '{file_name}' is too large to upload for user '{user_sessions[message.chat.id]}'.")
+                    else:
+                        with open(file_path, 'rb') as f:
+                            bot.send_document(message.chat.id, f, timeout=180)  # Increase timeout for larger files
+                            downloaded_files.append(file_name)
+                            logging.info(f"User '{user_sessions[message.chat.id]}' downloaded file '{file_name}'.")
+                except requests.exceptions.Timeout:
+                    bot.reply_to(message, f"⏳ The download request for '{file_name}' timed out. Please try again.")
+                except requests.exceptions.ConnectionError as e:
+                    bot.reply_to(message, f"❌ Connection error while downloading '{file_name}': {str(e)}. Please try again later.")
+                except Exception as e:
+                    bot.reply_to(message, f"❌ An unexpected error occurred while downloading '{file_name}': {str(e)}.")
+                    logging.error(f"Error downloading file '{file_name}': {str(e)}")
+            else:
+                not_found_files.append(file_name)
+        else:
+            not_found_files.append(str(index + 1))
 
-            with open(file_path, 'rb') as f:
-                bot.send_document(message.chat.id, f, timeout=180)  # Increase timeout for larger files
-                logging.info(f"User '{user_sessions[message.chat.id]}' downloaded file '{file_name}'.")
+    # Response messages
+    if downloaded_files:
+        bot.reply_to(message, f"✅ Successfully downloaded files:\n- {', '.join(downloaded_files)}.")
+    if too_large_files:
+        bot.reply_to(message, f"❌ Files too large to download: {', '.join(too_large_files)}.")
+    if not_found_files:
+        bot.reply_to(message, f"❌ Invalid indices or files not found: {', '.join(not_found_files)}.")
 
-        except requests.exceptions.Timeout:
-            bot.reply_to(message, "⏳ The download request timed out. Please try again.")
-        except requests.exceptions.ConnectionError as e:
-            bot.reply_to(message, f"❌ Connection error: {str(e)}. Please try again later.")
-        except Exception as e:
-            bot.reply_to(message, f"❌ An unexpected error occurred: {str(e)}.")
-            logging.error(f"Error downloading file '{file_name}': {str(e)}")
-    else:
-        bot.reply_to(message, "❌ File not found.")
-        logging.warning(f"File '{file_name}' not found for user '{user_sessions[message.chat.id]}'.")
 
 @bot.message_handler(commands=['rename'])
 def handle_rename(message):
@@ -365,26 +390,32 @@ def handle_rename(message):
         return
 
     text_split = message.text.split()
-    if len(text_split) < 3:
-        bot.reply_to(message, "❓ Please provide the old and new file names after the /rename command.")
+    if len(text_split) < 3 or not text_split[1].isdigit():
+        bot.reply_to(message, "❓ Please provide a file index and the new file name after the /rename command.")
         return
 
-    old_file_name = text_split[1]
+    file_index = int(text_split[1]) - 1  # Convert to zero-based index
     new_file_name = text_split[2]
-    old_file_path = os.path.join(UPLOAD_DIR, old_file_name)
-    new_file_path = os.path.join(UPLOAD_DIR, new_file_name)
+    files = os.listdir(UPLOAD_DIR)
 
-    if os.path.exists(old_file_path):
-        try:
-            os.rename(old_file_path, new_file_path)
-            bot.reply_to(message, f"✏️ File renamed successfully from {old_file_name} to {new_file_name}.")
-            logging.info(f"User '{user_sessions[message.chat.id]}' renamed file '{old_file_name}' to '{new_file_name}'.")
-        except Exception as e:
-            bot.reply_to(message, f"❌ Failed to rename file: {str(e)}")
-            logging.error(f"Error renaming file for user '{user_sessions[message.chat.id]}': {str(e)}")
+    if 0 <= file_index < len(files):  # Validate file index
+        old_file_name = files[file_index]
+        old_file_path = os.path.join(UPLOAD_DIR, old_file_name)
+        new_file_path = os.path.join(UPLOAD_DIR, new_file_name)
+
+        if os.path.exists(old_file_path):
+            try:
+                os.rename(old_file_path, new_file_path)
+                bot.reply_to(message, f"✏️ File renamed successfully from {old_file_name} to {new_file_name}.")
+                logging.info(f"User '{user_sessions[message.chat.id]}' renamed file '{old_file_name}' to '{new_file_name}'.")
+            except Exception as e:
+                bot.reply_to(message, f"❌ Failed to rename file: {str(e)}")
+                logging.error(f"Error renaming file for user '{user_sessions[message.chat.id]}': {str(e)}")
+        else:
+            bot.reply_to(message, f"❌ File '{old_file_name}' not found.")
+            logging.warning(f"File '{old_file_name}' not found for user '{user_sessions[message.chat.id]}'.")
     else:
-        bot.reply_to(message, f"❌ File '{old_file_name}' not found.")
-        logging.warning(f"File '{old_file_name}' not found for user '{user_sessions[message.chat.id]}'.")
+        bot.reply_to(message, "❌ Invalid file index.")
 
 
 @bot.message_handler(commands=['delete'])
@@ -395,22 +426,33 @@ def handle_delete(message):
 
     text_split = message.text.split()
     if len(text_split) < 2:
-        bot.reply_to(message, "❓ Please provide the file name after the /delete command.")
+        bot.reply_to(message, "❓ Please provide file indices after the /delete command (e.g., /delete 1 3 5).")
         return
 
-    file_name = text_split[1]
-    file_path = os.path.join(UPLOAD_DIR, file_name)
-    if os.path.exists(file_path):
-        try:
-            os.remove(file_path)
-            bot.reply_to(message, f"✅ File '{file_name}' deleted successfully.")
-            logging.info(f"User '{user_sessions[message.chat.id]}' deleted file '{file_name}'.")
-        except Exception as e:
-            bot.reply_to(message, f"❌ Failed to delete file: {str(e)}")
-            logging.error(f"Error deleting file for user '{user_sessions[message.chat.id]}': {str(e)}")
-    else:
-        bot.reply_to(message, f"❌ File '{file_name}' not found.")
-        logging.warning(f"File '{file_name}' not found for user '{user_sessions[message.chat.id]}'.")
+    file_indices = [int(i) - 1 for i in text_split[1:] if i.isdigit()]
+    files = os.listdir(UPLOAD_DIR)
+    deleted_files = []
+    not_found_files = []
+
+    for index in file_indices:
+        if 0 <= index < len(files):  # Check if index is valid
+            file_name = files[index]
+            file_path = os.path.join(UPLOAD_DIR, file_name)
+            try:
+                os.remove(file_path)
+                deleted_files.append(file_name)
+                logging.info(f"User '{user_sessions[message.chat.id]}' deleted file '{file_name}'.")
+            except Exception as e:
+                bot.reply_to(message, f"❌ Failed to delete file '{file_name}': {str(e)}")
+                logging.error(f"Error deleting file for user '{user_sessions[message.chat.id]}': {str(e)}")
+        else:
+            not_found_files.append(str(index + 1))
+
+    # Response messages
+    if deleted_files:
+        bot.reply_to(message, f"✅ Successfully deleted files:\n- {', '.join(deleted_files)}.")
+    if not_found_files:
+        bot.reply_to(message, f"❌ Invalid indices: {', '.join(not_found_files)}.")
 
 
 @bot.message_handler(commands=['list'])
@@ -423,7 +465,7 @@ def handle_list(message):
     if not files:
         bot.reply_to(message, "📁 No files uploaded yet.")
     else:
-        file_list = "\n".join(files)
+        file_list = "\n".join([f"{i + 1}. {file}" for i, file in enumerate(files)])  # Add index
         bot.reply_to(message, f"📁 Uploaded files:\n{file_list}")
         logging.info(f"User '{user_sessions[message.chat.id]}' requested file list.")
 
@@ -435,35 +477,41 @@ def handle_metadata(message):
         return
 
     text_split = message.text.split()
-    if len(text_split) < 2:
-        bot.reply_to(message, "❓ Please provide a file name after the /metadata command.")
+    if len(text_split) < 2 or not text_split[1].isdigit():
+        bot.reply_to(message, "❓ Please provide a valid file index after the /metadata command.")
         return
 
-    file_name = text_split[1]
-    file_path = os.path.join(UPLOAD_DIR, file_name)
+    file_index = int(text_split[1]) - 1  # Convert to zero-based index
+    files = os.listdir(UPLOAD_DIR)
 
-    if os.path.exists(file_path):
-        file_size = os.path.getsize(file_path)
-        file_creation_time = os.path.getctime(file_path)
-        file_modification_time = os.path.getmtime(file_path)
+    if 0 <= file_index < len(files):  # Validate file index
+        file_name = files[file_index]
+        file_path = os.path.join(UPLOAD_DIR, file_name)
 
-        # Format the timestamps
-        creation_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(file_creation_time))
-        modification_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(file_modification_time))
+        if os.path.exists(file_path):
+            file_size = os.path.getsize(file_path)
+            file_creation_time = os.path.getctime(file_path)
+            file_modification_time = os.path.getmtime(file_path)
 
-        metadata_info = f"""
+            # Format the timestamps
+            creation_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(file_creation_time))
+            modification_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(file_modification_time))
+
+            metadata_info = f"""
 📄 File Metadata:
 - Name: {file_name}
 - Size: {file_size} bytes
 - Created: {creation_time_str}
 - Modified: {modification_time_str}
 """
-        bot.reply_to(message, metadata_info)
-        logging.info(f"User '{user_sessions[message.chat.id]}' requested metadata for file '{file_name}'.")
+            bot.reply_to(message, metadata_info)
+            logging.info(f"User '{user_sessions[message.chat.id]}' requested metadata for file '{file_name}'.")
+        else:
+            bot.reply_to(message, f"❌ File '{file_name}' not found.")
+            logging.warning(f"File '{file_name}' not found for user '{user_sessions[message.chat.id]}'.")
     else:
-        bot.reply_to(message, f"❌ File '{file_name}' not found.")
-        logging.warning(f"File '{file_name}' not found for user '{user_sessions[message.chat.id]}'.")
-        
+        bot.reply_to(message, "❌ Invalid file index.")
+     
 
 keep_alive()
 
