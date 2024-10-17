@@ -1,9 +1,9 @@
-pyTelegramBotAPI
-requests
-urllib3
-pyinstaller
-rich
-tqdm
 Flask
 psutil
+pyinstaller
+pyTelegramBotAPI
 python-dotenv
+rich
+requests
+tqdm
+urllib3
