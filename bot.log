@@ -1,4 +1,27 @@
-2024-10-15 11:59:31,316 - INFO - User 'Vortex' logged in.
-2024-10-15 11:59:55,006 - INFO - File "Every Anime That I've Watched.txt" uploaded by user 'Vortex'.
-2024-10-15 12:02:27,409 - INFO - User 'Vortex' requested file list.
-2024-10-15 12:16:07,680 - INFO - User 'Vortex' logged in.
+2024-10-24 17:36:54,635 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://192.168.221.141:8080
+2024-10-24 17:36:54,635 - INFO - [33mPress CTRL+C to quit[0m
+2024-10-24 17:37:05,136 - INFO - 192.168.221.112 - - [24/Oct/2024 17:37:05] "[33mGET /login.html HTTP/1.1[0m" 404 -
+2024-10-24 17:37:05,225 - INFO - 192.168.221.112 - - [24/Oct/2024 17:37:05] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2024-10-24 17:37:33,935 - INFO - 192.168.221.112 - - [24/Oct/2024 17:37:33] "[32mGET / HTTP/1.1[0m" 302 -
+2024-10-24 17:37:33,975 - INFO - 192.168.221.112 - - [24/Oct/2024 17:37:33] "GET /login HTTP/1.1" 200 -
+2024-10-24 17:37:34,087 - INFO - 192.168.221.112 - - [24/Oct/2024 17:37:34] "GET /static/images/login_bg.jpg HTTP/1.1" 200 -
+2024-10-24 17:37:46,137 - INFO - 192.168.221.112 - - [24/Oct/2024 17:37:46] "POST /login HTTP/1.1" 200 -
+2024-10-24 17:37:46,476 - INFO - 192.168.221.112 - - [24/Oct/2024 17:37:46] "[36mGET /static/images/login_bg.jpg HTTP/1.1[0m" 304 -
+2024-10-24 17:37:54,954 - INFO - 192.168.221.112 - - [24/Oct/2024 17:37:54] "[32mPOST /login HTTP/1.1[0m" 302 -
+2024-10-24 17:37:55,023 - INFO - 192.168.221.112 - - [24/Oct/2024 17:37:55] "GET / HTTP/1.1" 200 -
+2024-10-24 17:38:04,972 - INFO - 192.168.221.112 - - [24/Oct/2024 17:38:04] "GET /download/tettts.c HTTP/1.1" 200 -
+2024-10-24 17:39:05,749 - INFO - 192.168.221.112 - - [24/Oct/2024 17:39:05] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2024-10-24 17:39:08,075 - INFO - 192.168.221.112 - - [24/Oct/2024 17:39:08] "GET / HTTP/1.1" 200 -
+2024-10-24 17:39:17,075 - INFO - 127.0.0.1 - - [24/Oct/2024 17:39:17] "GET / HTTP/1.1" 200 -
+2024-10-24 17:56:28,099 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://192.168.221.141:8080
+2024-10-24 17:56:28,099 - INFO - [33mPress CTRL+C to quit[0m
+2024-10-24 17:56:28,847 - INFO - 127.0.0.1 - - [24/Oct/2024 17:56:28] "GET / HTTP/1.1" 200 -
+2024-10-24 17:56:45,549 - INFO - 127.0.0.1 - - [24/Oct/2024 17:56:45] "[36mGET /download/Sem3%20_CE_Regular.pdf HTTP/1.1[0m" 304 -
+2024-10-24 17:56:59,939 - INFO - User 'Vortex' logged in.
+2024-10-24 17:57:11,688 - INFO - User 'Vortex' downloaded file 'Sem3 _CE_Regular.pdf'.

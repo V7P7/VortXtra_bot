@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Management Bot</title>
+    <style>
+        /* Reset some default browser styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1c1c1e;
+            color: #f5f5f5;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #00c853;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h2 {
+            margin-top: 30px;
+            font-size: 1.5em;
+            color: #f5f5f5;
+        }
+
+        .content {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background-color: #2c2c2e;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #3a3a3c;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #4a4a4c;
+        }
+
+        th,
+        td {
+            padding: 16px 20px;
+            text-align: left;
+            font-size: 1em;
+        }
+
+        th {
+            background-color: #00796b;
+            color: white;
+        }
+
+        tr {
+            height: 60px;
+            /* Increased row height */
+        }
+
+        tr:nth-child(even) {
+            background-color: #2c2c2e;
+        }
+
+        tr:nth-child(odd) {
+            background-color: #3a3a3c;
+        }
+
+        .button {
+            display: inline-block;
+            width: 120px;
+            /* Same button width */
+            height: 40px;
+            /* Set a consistent height */
+            padding: 10px 0;
+            background-color: #00c853;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 6px;
+            text-align: center;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+            margin-right: 5px;
+            /* Add margin to space out buttons */
+        }
+
+        .button:hover {
+            background-color: #00e676;
+        }
+
+        .button.danger-button {
+            background-color: #d32f2f;
+        }
+
+        .button.danger-button:hover {
+            background-color: #f44336;
+        }
+
+        input[type="text"],
+        input[type="file"] {
+            padding: 12px;
+            width: calc(100% - 24px);
+            margin: 8px 0;
+            background-color: #333;
+            color: white;
+            border-radius: 6px;
+            border: 1px solid #555;
+        }
+
+        /* Search box */
+        .search-box {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 9999;
+            opacity: 0;
+            /* Start as invisible */
+            transition: opacity 0.5s ease;
+            /* Smooth opacity transition */
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #2c2c2e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00c853;
+        }
+        .flash-messages {
+            position: relative;
+            margin: 15px 0;
+        }
+        
+        .alert {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }        
+    </style>
+</head>
+
+<body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <ul>
+        {% for category, message in messages %}
+        <li class="{{ category }}">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+    <h1>File Management</h1>
+    <a href="/logout" class="button danger-button" style="margin-top: 20px;">Logout</a>
+    <h2>Available Files:</h2>
+
+    <table>
+        <tr>
+            <th>Filename</th>
+            <th>Actions</th>
+        </tr>
+        {% for file in files %}
+        <tr>
+            <td>{{ file }}</td>
+            <td>
+                <a href="/download/{{ file }}" class="button">Download</a>
+                <form action="/delete" method="post" style="display:inline;">
+                    <input type="hidden" name="filename" value="{{ file }}">
+                    <button type="submit" class="button danger-button">Delete</button>
+                </form>
+                <form action="/rename" method="post" style="display:inline;">
+                    <input type="hidden" name="old_name" value="{{ file }}">
+                    <input type="text" name="new_name" placeholder="New name">
+                    <button type="submit" class="button">Rename</button>
+                </form>
+                <a href="/metadata/{{ file }}" class="button">Metadata</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Upload a New File:</h2>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <button type="submit" class="button">Upload</button>
+    </form>
+
+    <div id="popup" class="popup"></div>
+
+    <script>
+        // Function to show a temporary message popup
+        function showPopup(message, type) {
+            const popup = document.createElement('div');
+            popup.className = `popup ${type}`;
+            popup.innerText = message;
+
+            // Set a timer to remove the popup after 1 second
+            setTimeout(() => {
+                popup.remove();
+            }, 1000);
+
+            // Add the popup to the body
+            document.body.appendChild(popup);
+        }
+
+        // Function to confirm deletion
+        function confirmDelete(event) {
+            event.preventDefault(); // Prevent form submission
+            const filename = event.target.filename.value; // Get the filename
+            const confirmation = confirm(`Are you sure you want to delete ${filename}?`);
+
+            if (confirmation) {
+                event.target.submit(); // Submit the form if confirmed
+            }
+        }
+
+        // Add event listeners to delete buttons
+        document.querySelectorAll('.danger-button').forEach(button => {
+            button.addEventListener('click', confirmDelete);
+        });
+    </script>
+
+</body>
+
+</html>

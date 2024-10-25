@@ -1,0 +1,10 @@
+Flask
+Flask-Session
+psutil
+pyinstaller
+pyTelegramBotAPI
+python-dotenv
+rich
+requests
+tqdm
+urllib3
